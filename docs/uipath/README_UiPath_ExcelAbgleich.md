@@ -1,78 +1,69 @@
-# UiPath Excel-Abgleich (Invoke Code, C#)
+# UiPath SOP-Monatsvergleich (Invoke Code, C#)
 
-Vergleicht zwei Monatsstaende (`dtAlt`, `dtNeu`) und erzeugt eine Aenderungstabelle `dtChanges` fuer:
+Dieses Snippet vergleicht die SOP-Daten des Vormonats mit dem aktuellen Monat auf Ebene der `Anlagen-Nummer` und bereitet die Aenderungen fuer den weiteren UiPath-Flow auf.
 
-- neue/weggefallene Bilanzkreise (`NEU`, `WEG`)
-- neue/weggefallene Typen innerhalb bestehender Bilanzkreise (`RLM_NEU`, `RLM_WEG`, `SLP_NEU`, `SLP_WEG`)
-- Regimewechsel zwischen `TAGES` und `STUNDEN` (`WECHSEL_TAGES_STUNDEN`)
+## Abgedeckte Logik
 
-## Datei
-
-- Code: `InvokeCode_ExcelAbgleich.cs`
+1. Vergleich Vor- vs. Aktuell-Monat auf Basis der `Anlagen-Nummer`
+2. Ermittlung der zusaetzlichen bzw. weggefallenen Eintraege
+3. Nachpruefung der Aenderungstabelle auf Wiederholungen
+4. Konsolidierung von Wiederholungen mit gleicher `Zaehlpunktbezeichnung`
+5. Summierung der `Prognosesmenge` bei konsolidierten Wiederholungen
+6. Kennzeichnung von Faellen mit unterschiedlicher `Zaehlpunktbezeichnung` fuer manuelle Bearbeitung
 
 ## UiPath Setup
 
-1. Activity: `Invoke Code`
-2. Language: `CSharp`
-3. Namespaces:
-   - `System`
-   - `System.Data`
-   - `System.Linq`
-   - `System.Collections.Generic`
-4. Arguments:
-   - `dtAlt` (`System.Data.DataTable`, `In`)
-   - `dtNeu` (`System.Data.DataTable`, `In`)
-   - `dtChanges` (`System.Data.DataTable`, `Out`)
+Activity:
+- `Invoke Code`
+
+Language:
+- `CSharp`
+
+Namespaces:
+- `System`
+- `System.Data`
+- `System.Linq`
+- `System.Collections.Generic`
+- `System.Globalization`
+
+Arguments:
+- `dtAlt` (`System.Data.DataTable`, `In`)
+- `dtNeu` (`System.Data.DataTable`, `In`)
+- `dtChanges` (`System.Data.DataTable`, `Out`)
 
 ## Erwartete Input-Spalten
 
-- `BILANZKREIS`
-- `FALLGRUPPE`
+- `Anlagen-Nummer`
+- `Zählpunktbezeichnung`
+- `Prognosesmenge`
+- `Prognoses-ab`
+- `Prognoses-bis`
 
-Hinweis: Spaltennamen, die mit `Unnamed` beginnen, werden automatisch entfernt.
+Weitere Spalten werden in die Ausgabe uebernommen, sofern sie in den Input-Tabellen vorhanden sind.
 
-## Output-Spalten (mindestens)
+## Output
 
-- alle Spalten aus `dtAlt`/`dtNeu` (je nach Clone-Basis)
+Die Ausgabe `dtChanges` enthaelt die originalen Datenspalten plus diese Zusatzspalten:
+
 - `Status`
-- `Typ`
-- `Regime_alt`
-- `Regime_neu`
+  - `NEU` fuer zusaetzliche Eintraege im aktuellen Monat
+  - `WEG` fuer Eintraege, die im aktuellen Monat fehlen
+- `ManuellePruefung`
+  - `JA`, wenn fuer dieselbe `Anlagen-Nummer` unterschiedliche `Zaehlpunktbezeichnungen` in der Aenderungstabelle vorkommen
+  - `NEIN` in allen anderen Faellen
+- `Hinweis`
+  - Erlaeuterung zur Konsolidierung oder zur manuellen Pruefung
+- `AnzahlKonsolidierterZeilen`
+  - Anzahl der urspruenglichen Aenderungszeilen, die in einer Ausgabezeile aufgegangen sind
 
-## Statuswerte
+## Fachliche Wirkung
 
-- `NEU`: Bilanzkreis existiert nur in `dtNeu`
-- `WEG`: Bilanzkreis existiert nur in `dtAlt`
-- `RLM_NEU` / `RLM_WEG`: Typ RLM ist innerhalb eines bestehenden Bilanzkreises neu/weg
-- `SLP_NEU` / `SLP_WEG`: Typ SLP ist innerhalb eines bestehenden Bilanzkreises neu/weg
-- `WECHSEL_TAGES_STUNDEN`: Typ vorhanden in beiden Monaten, Regimewechsel Tages <-> Stunden erkannt
+- Wiederholungen mit gleicher `Zaehlpunktbezeichnung` werden zu einer Zeile je Status zusammengefuehrt.
+- Dabei wird die `Prognosesmenge` aufsummiert.
+- `Prognoses-ab` wird auf das frueheste Datum gesetzt.
+- `Prognoses-bis` wird auf das spaeteste Datum gesetzt.
+- Wiederholungen mit unterschiedlicher `Zaehlpunktbezeichnung` bleiben getrennt und werden mit `ManuellePruefung = JA` markiert.
 
-## Wichtige technische Entscheidungen
+## Hinweis zu den Beispieldateien
 
-- Robustes Zeilenkopieren: kein direktes `ItemArray`-Setzen, damit keine Fehler bei zusaetzlichen Spalten entstehen.
-- Case-insensitive Typ-Erkennung (`RLM`/`SLP`).
-- Deduplizierung am Ende auf Basis `BILANZKREIS + Typ + Status + Regime_alt + Regime_neu`.
-- Sortierung nach `BILANZKREIS`, `Status`, `Typ`.
-
-## Bekannte Grenzen
-
-- Regime-Erkennung basiert auf Textmustern in `FALLGRUPPE`.
-- Bei uneindeutigen Texten wird `UNKNOWN` oder `MIXED` gesetzt.
-- Wechsel werden nur fuer eindeutige Wechsel `TAGES` <-> `STUNDEN` gemeldet.
-
-## Beispiel fuer Repo-README (Kurztext)
-
-```md
-## Excel-Abgleich in UiPath (Invoke Code, C#)
-
-Dieses Snippet vergleicht zwei Monatsdaten (`dtAlt`, `dtNeu`) und erzeugt eine Aenderungstabelle mit:
-- NEU/WEG auf Bilanzkreis-Ebene
-- RLM/SLP NEU/WEG innerhalb bestehender Bilanzkreise
-- Regimewechsel Tages <-> Stunden
-
-Technisch umgesetzt als `Invoke Code` in C# mit DataTable-Indexierung und robustem Spaltenhandling.
-```
-
-## Lizenz / Nutzung
-
-Vor dem Veröffentlichen bitte ggf. interne Begriffe, Kundendaten und Dateinamen anonymisieren.
+Mit den Beispieldateien Januar 2026 und Februar 2026 entsteht mindestens ein Konsolidierungsfall, bei dem zwei `NEU`-Zeilen fuer dieselbe `Anlagen-Nummer` und dieselbe `Zaehlpunktbezeichnung` zu einer Zeile zusammengefuehrt werden.

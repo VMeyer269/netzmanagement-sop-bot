@@ -1,268 +1,365 @@
 // UiPath Invoke Code (Language: C#)
-// In-Arguments: dtAlt (DataTable), dtNeu (DataTable)
-// Out-Argument: dtChanges (DataTable)
+// In-Arguments:
+//   dtAlt     (System.Data.DataTable)  -> Vormonat
+//   dtNeu     (System.Data.DataTable)  -> aktueller Monat
+// Out-Arguments:
+//   dtChanges (System.Data.DataTable)  -> bereinigte Aenderungen
 //
 // Required namespaces in UiPath:
 // System
 // System.Data
 // System.Linq
 // System.Collections.Generic
+// System.Globalization
 
-string keyCol = "BILANZKREIS";
-string fallCol = "FALLGRUPPE";
+var deCulture = new CultureInfo("de-DE");
 
-// -------- Helpers --------
-
-Action<DataTable> DropUnnamedColumns = (dt) =>
+Func<object, string> AsText = value =>
 {
-    if (dt == null) return;
-    var remove = dt.Columns.Cast<DataColumn>()
-        .Where(c => !string.IsNullOrWhiteSpace(c.ColumnName) && c.ColumnName.StartsWith("Unnamed", StringComparison.OrdinalIgnoreCase))
+    return (value ?? string.Empty).ToString().Trim();
+};
+
+Func<string, string> NormalizeKey = value =>
+{
+    return (value ?? string.Empty).Trim().ToUpperInvariant();
+};
+
+Func<DataTable, string, string> GetColumnName = (table, expectedName) =>
+{
+    var match = table.Columns
+        .Cast<DataColumn>()
+        .FirstOrDefault(c => string.Equals(
+            c.ColumnName?.Trim(),
+            expectedName,
+            StringComparison.OrdinalIgnoreCase));
+
+    if (match == null)
+    {
+        throw new Exception("Pflichtspalte nicht gefunden: " + expectedName);
+    }
+
+    return match.ColumnName;
+};
+
+Action<DataTable> CleanupTable = table =>
+{
+    if (table == null) return;
+
+    var unnamedColumns = table.Columns
+        .Cast<DataColumn>()
+        .Where(c =>
+            string.IsNullOrWhiteSpace(c.ColumnName) ||
+            c.ColumnName.StartsWith("Unnamed", StringComparison.OrdinalIgnoreCase))
         .ToList();
-    foreach (var c in remove) dt.Columns.Remove(c);
-};
 
-Func<object, string> GetTyp = (fall) =>
-{
-    var t = (fall ?? string.Empty).ToString().ToUpperInvariant();
-    if (t.Contains("RLM")) return "RLM";
-    if (t.Contains("SLP")) return "SLP";
-    return "OTHER";
-};
-
-Func<object, string> GetRegime = (fall) =>
-{
-    var t = (fall ?? string.Empty).ToString().ToUpperInvariant();
-
-    bool isTages = t.Contains("TAGES") || t.Contains("TAGE") || t.Contains("TAG ");
-    bool isStunden = t.Contains("STUND") || t.Contains("STD");
-
-    if (isTages && !isStunden) return "TAGES";
-    if (isStunden && !isTages) return "STUNDEN";
-    if (isTages && isStunden) return "MIXED";
-    return "UNKNOWN";
-};
-
-Func<DataTable, DataTable> CloneWithBaseCols = (source) =>
-{
-    var dt = (source != null) ? source.Clone() : new DataTable();
-
-    if (!dt.Columns.Contains("Status")) dt.Columns.Add("Status", typeof(string));
-    if (!dt.Columns.Contains("Typ")) dt.Columns.Add("Typ", typeof(string));
-    if (!dt.Columns.Contains("Regime_alt")) dt.Columns.Add("Regime_alt", typeof(string));
-    if (!dt.Columns.Contains("Regime_neu")) dt.Columns.Add("Regime_neu", typeof(string));
-
-    return dt;
-};
-
-Action<DataRow, DataRow> CopyCommonColumns = (src, dst) =>
-{
-    if (src == null || dst == null) return;
-    foreach (DataColumn c in src.Table.Columns)
+    foreach (var column in unnamedColumns)
     {
-        if (dst.Table.Columns.Contains(c.ColumnName))
+        table.Columns.Remove(column);
+    }
+
+    var rowsToDelete = table.AsEnumerable()
+        .Where(row =>
         {
-            dst[c.ColumnName] = src[c.ColumnName];
+            bool hasValues = row.ItemArray.Any(cell => !string.IsNullOrWhiteSpace(AsText(cell)));
+            if (!hasValues) return true;
+
+            var firstValue = row.ItemArray.Length > 0 ? AsText(row.ItemArray[0]) : string.Empty;
+            return firstValue.StartsWith("EXPORT aus ", StringComparison.OrdinalIgnoreCase);
+        })
+        .ToList();
+
+    foreach (var row in rowsToDelete)
+    {
+        table.Rows.Remove(row);
+    }
+};
+
+Func<object, decimal> ParseDecimal = value =>
+{
+    var text = AsText(value);
+    if (string.IsNullOrWhiteSpace(text)) return 0m;
+
+    decimal parsed;
+    if (decimal.TryParse(text, NumberStyles.Any, deCulture, out parsed)) return parsed;
+    if (decimal.TryParse(text.Replace(".", string.Empty).Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out parsed)) return parsed;
+    if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out parsed)) return parsed;
+
+    return 0m;
+};
+
+Func<decimal, string> FormatDecimal = value =>
+{
+    return value.ToString("0.####", deCulture);
+};
+
+Func<object, DateTime?> ParseDate = value =>
+{
+    var text = AsText(value);
+    if (string.IsNullOrWhiteSpace(text)) return null;
+
+    DateTime parsed;
+    if (DateTime.TryParse(text, deCulture, DateTimeStyles.None, out parsed)) return parsed;
+    if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) return parsed;
+
+    return null;
+};
+
+Func<DateTime?, string> FormatDate = value =>
+{
+    return value.HasValue ? value.Value.ToString("dd.MM.yyyy") : string.Empty;
+};
+
+Func<DataTable> CreateRawTable = () =>
+{
+    var raw = new DataTable("RawChanges");
+
+    foreach (DataColumn column in dtNeu.Columns)
+    {
+        if (!raw.Columns.Contains(column.ColumnName))
+        {
+            raw.Columns.Add(column.ColumnName, typeof(string));
         }
     }
-};
 
-// result[bk][typ] = set(Regime)
-Func<DataTable, Dictionary<string, Dictionary<string, HashSet<string>>>> BuildBkTypRegimeIndex = (dt) =>
-{
-    var result = new Dictionary<string, Dictionary<string, HashSet<string>>>(StringComparer.OrdinalIgnoreCase);
-    if (dt == null || dt.Rows.Count == 0) return result;
-    if (!dt.Columns.Contains(keyCol) || !dt.Columns.Contains(fallCol)) return result;
-
-    foreach (DataRow r in dt.Rows)
+    foreach (DataColumn column in dtAlt.Columns)
     {
-        var bk = (r[keyCol] ?? string.Empty).ToString();
-        var typ = GetTyp(r[fallCol]);
-        var reg = GetRegime(r[fallCol]);
-
-        if (!result.ContainsKey(bk))
-            result[bk] = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-
-        if (!result[bk].ContainsKey(typ))
-            result[bk][typ] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        result[bk][typ].Add(reg);
-    }
-    return result;
-};
-
-Func<HashSet<string>, string> ReduceRegime = (set) =>
-{
-    if (set == null || set.Count == 0) return null;
-    if (set.Count == 1) return set.First();
-    return "MIXED";
-};
-
-Func<DataTable, HashSet<string>, string, string, DataTable> FilterByBkAndTypWithStatus = (source, bkSet, typWanted, status) =>
-{
-    var outDt = CloneWithBaseCols(source);
-    if (source == null || source.Rows.Count == 0) return outDt;
-    if (bkSet == null || bkSet.Count == 0) return outDt;
-    if (!source.Columns.Contains(keyCol) || !source.Columns.Contains(fallCol)) return outDt;
-
-    foreach (DataRow r in source.AsEnumerable()
-        .Where(x => bkSet.Contains((x[keyCol] ?? string.Empty).ToString()) && GetTyp(x[fallCol]) == typWanted))
-    {
-        var n = outDt.NewRow();
-        CopyCommonColumns(r, n);
-        n["Status"] = status;
-        n["Typ"] = typWanted;
-        outDt.Rows.Add(n);
-    }
-    return outDt;
-};
-
-// -------- Prepare --------
-
-DropUnnamedColumns(dtAlt);
-DropUnnamedColumns(dtNeu);
-
-var idxAlt = BuildBkTypRegimeIndex(dtAlt);
-var idxNeu = BuildBkTypRegimeIndex(dtNeu);
-
-// Output init
-dtChanges = CloneWithBaseCols(dtNeu ?? dtAlt);
-
-// -------- 1) BK neu / weg --------
-
-var bkNeu = new HashSet<string>(idxNeu.Keys.Except(idxAlt.Keys), StringComparer.OrdinalIgnoreCase);
-var bkWeg = new HashSet<string>(idxAlt.Keys.Except(idxNeu.Keys), StringComparer.OrdinalIgnoreCase);
-
-if (dtNeu != null && dtNeu.Columns.Contains(keyCol))
-{
-    foreach (DataRow r in dtNeu.AsEnumerable().Where(r => bkNeu.Contains((r[keyCol] ?? string.Empty).ToString())))
-    {
-        var n = dtChanges.NewRow();
-        CopyCommonColumns(r, n);
-        n["Status"] = "NEU";
-        if (dtNeu.Columns.Contains(fallCol)) n["Typ"] = GetTyp(r[fallCol]);
-        dtChanges.Rows.Add(n);
-    }
-}
-
-if (dtAlt != null && dtAlt.Columns.Contains(keyCol))
-{
-    foreach (DataRow r in dtAlt.AsEnumerable().Where(r => bkWeg.Contains((r[keyCol] ?? string.Empty).ToString())))
-    {
-        var n = dtChanges.NewRow();
-        CopyCommonColumns(r, n);
-        n["Status"] = "WEG";
-        if (dtAlt.Columns.Contains(fallCol)) n["Typ"] = GetTyp(r[fallCol]);
-        dtChanges.Rows.Add(n);
-    }
-}
-
-// -------- 2) RLM/SLP neu/weg innerhalb bestehender BKs --------
-
-var commonBk = new HashSet<string>(idxAlt.Keys.Intersect(idxNeu.Keys), StringComparer.OrdinalIgnoreCase);
-
-var rlmNeuBk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-var rlmWegBk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-var slpNeuBk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-var slpWegBk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-foreach (var bk in commonBk)
-{
-    bool altRlm = idxAlt.ContainsKey(bk) && idxAlt[bk].ContainsKey("RLM");
-    bool neuRlm = idxNeu.ContainsKey(bk) && idxNeu[bk].ContainsKey("RLM");
-    if (!altRlm && neuRlm) rlmNeuBk.Add(bk);
-    if (altRlm && !neuRlm) rlmWegBk.Add(bk);
-
-    bool altSlp = idxAlt.ContainsKey(bk) && idxAlt[bk].ContainsKey("SLP");
-    bool neuSlp = idxNeu.ContainsKey(bk) && idxNeu[bk].ContainsKey("SLP");
-    if (!altSlp && neuSlp) slpNeuBk.Add(bk);
-    if (altSlp && !neuSlp) slpWegBk.Add(bk);
-}
-
-var dtRlmNeu = FilterByBkAndTypWithStatus(dtNeu, rlmNeuBk, "RLM", "RLM_NEU");
-var dtRlmWeg = FilterByBkAndTypWithStatus(dtAlt, rlmWegBk, "RLM", "RLM_WEG");
-var dtSlpNeu = FilterByBkAndTypWithStatus(dtNeu, slpNeuBk, "SLP", "SLP_NEU");
-var dtSlpWeg = FilterByBkAndTypWithStatus(dtAlt, slpWegBk, "SLP", "SLP_WEG");
-
-foreach (DataRow r in dtRlmNeu.Rows) dtChanges.ImportRow(r);
-foreach (DataRow r in dtRlmWeg.Rows) dtChanges.ImportRow(r);
-foreach (DataRow r in dtSlpNeu.Rows) dtChanges.ImportRow(r);
-foreach (DataRow r in dtSlpWeg.Rows) dtChanges.ImportRow(r);
-
-// -------- 3) Wechsel Tages <-> Stundenregime (pro BK + Typ) --------
-
-var dtRegimeSwitch = new DataTable();
-dtRegimeSwitch.Columns.Add(keyCol, typeof(string));
-dtRegimeSwitch.Columns.Add("Typ", typeof(string));
-dtRegimeSwitch.Columns.Add("Regime_alt", typeof(string));
-dtRegimeSwitch.Columns.Add("Regime_neu", typeof(string));
-dtRegimeSwitch.Columns.Add("Status", typeof(string));
-
-foreach (var bk in commonBk)
-{
-    foreach (var typ in new[] { "RLM", "SLP" })
-    {
-        bool hasAlt = idxAlt.ContainsKey(bk) && idxAlt[bk].ContainsKey(typ);
-        bool hasNeu = idxNeu.ContainsKey(bk) && idxNeu[bk].ContainsKey(typ);
-        if (!hasAlt || !hasNeu) continue;
-
-        var altReg = ReduceRegime(idxAlt[bk][typ]);
-        var neuReg = ReduceRegime(idxNeu[bk][typ]);
-
-        bool altOk = (altReg == "TAGES" || altReg == "STUNDEN");
-        bool neuOk = (neuReg == "TAGES" || neuReg == "STUNDEN");
-
-        if (altOk && neuOk && altReg != neuReg)
+        if (!raw.Columns.Contains(column.ColumnName))
         {
-            var row = dtRegimeSwitch.NewRow();
-            row[keyCol] = bk;
-            row["Typ"] = typ;
-            row["Regime_alt"] = altReg;
-            row["Regime_neu"] = neuReg;
-            row["Status"] = "WECHSEL_TAGES_STUNDEN";
-            dtRegimeSwitch.Rows.Add(row);
+            raw.Columns.Add(column.ColumnName, typeof(string));
         }
     }
-}
 
-foreach (DataRow r in dtRegimeSwitch.Rows)
+    raw.Columns.Add("Status", typeof(string));
+    raw.Columns.Add("ManuellePruefung", typeof(string));
+    raw.Columns.Add("Hinweis", typeof(string));
+    raw.Columns.Add("AnzahlKonsolidierterZeilen", typeof(string));
+    raw.Columns.Add("__AnlagenKey", typeof(string));
+    raw.Columns.Add("__ZaehlpunktKey", typeof(string));
+
+    return raw;
+};
+
+Func<DataTable, DataTable> CreateFinalTable = raw =>
 {
-    var n = dtChanges.NewRow();
-    n[keyCol] = r[keyCol];
-    n["Typ"] = r["Typ"];
-    n["Regime_alt"] = r["Regime_alt"];
-    n["Regime_neu"] = r["Regime_neu"];
-    n["Status"] = r["Status"];
-    dtChanges.Rows.Add(n);
-}
+    var finalTable = raw.Clone();
+    finalTable.Columns.Remove("__AnlagenKey");
+    finalTable.Columns.Remove("__ZaehlpunktKey");
+    finalTable.TableName = "Changes";
+    return finalTable;
+};
 
-// -------- Optional: Duplikate entfernen (gleicher BK + Typ + Status + Regime) --------
+Func<DataTable, DataRow, string, string, string, DataRow> BuildRawRow = (targetTable, sourceRow, status, anlagenCol, zaehlpunktCol) =>
+{
+    var row = targetTable.NewRow();
 
-var deduped = dtChanges.AsEnumerable()
-    .GroupBy(r => string.Join("|",
-        (r.Table.Columns.Contains(keyCol) ? (r[keyCol] ?? string.Empty).ToString() : string.Empty),
-        (r.Table.Columns.Contains("Typ") ? (r["Typ"] ?? string.Empty).ToString() : string.Empty),
-        (r.Table.Columns.Contains("Status") ? (r["Status"] ?? string.Empty).ToString() : string.Empty),
-        (r.Table.Columns.Contains("Regime_alt") ? (r["Regime_alt"] ?? string.Empty).ToString() : string.Empty),
-        (r.Table.Columns.Contains("Regime_neu") ? (r["Regime_neu"] ?? string.Empty).ToString() : string.Empty)))
-    .Select(g => g.First())
+    foreach (DataColumn column in sourceRow.Table.Columns)
+    {
+        if (targetTable.Columns.Contains(column.ColumnName))
+        {
+            row[column.ColumnName] = AsText(sourceRow[column]);
+        }
+    }
+
+    row["Status"] = status;
+    row["ManuellePruefung"] = "NEIN";
+    row["Hinweis"] = string.Empty;
+    row["AnzahlKonsolidierterZeilen"] = "1";
+    row["__AnlagenKey"] = NormalizeKey(sourceRow[anlagenCol]);
+    row["__ZaehlpunktKey"] = NormalizeKey(sourceRow[zaehlpunktCol]);
+
+    if (targetTable.Columns.Contains("Prognosesmenge"))
+    {
+        row["Prognosesmenge"] = FormatDecimal(ParseDecimal(sourceRow["Prognosesmenge"]));
+    }
+
+    return row;
+};
+
+Func<IEnumerable<DataRow>, string, string, IEnumerable<DataRow>> SortRows = (rows, dateFromCol, dateToCol) =>
+{
+    return rows
+        .OrderBy(r => ParseDate(r[dateFromCol]) ?? DateTime.MinValue)
+        .ThenBy(r => ParseDate(r[dateToCol]) ?? DateTime.MinValue)
+        .ThenBy(r => AsText(r["MaLo-ID"]))
+        .ThenBy(r => AsText(r["Vertrags-Nummer"]));
+};
+
+CleanupTable(dtAlt);
+CleanupTable(dtNeu);
+
+string anlagenColAlt = GetColumnName(dtAlt, "Anlagen-Nummer");
+string anlagenColNeu = GetColumnName(dtNeu, "Anlagen-Nummer");
+string zaehlpunktColAlt = GetColumnName(dtAlt, "Zählpunktbezeichnung");
+string zaehlpunktColNeu = GetColumnName(dtNeu, "Zählpunktbezeichnung");
+string prognoseColAlt = GetColumnName(dtAlt, "Prognosesmenge");
+string prognoseColNeu = GetColumnName(dtNeu, "Prognosesmenge");
+string vonColAlt = GetColumnName(dtAlt, "Prognoses-ab");
+string vonColNeu = GetColumnName(dtNeu, "Prognoses-ab");
+string bisColAlt = GetColumnName(dtAlt, "Prognoses-bis");
+string bisColNeu = GetColumnName(dtNeu, "Prognoses-bis");
+
+var rawChanges = CreateRawTable();
+
+var altByAnlage = dtAlt.AsEnumerable()
+    .GroupBy(row => NormalizeKey(row[anlagenColAlt]))
+    .ToDictionary(group => group.Key, group => group.ToList());
+
+var neuByAnlage = dtNeu.AsEnumerable()
+    .GroupBy(row => NormalizeKey(row[anlagenColNeu]))
+    .ToDictionary(group => group.Key, group => group.ToList());
+
+var allAnlagen = altByAnlage.Keys
+    .Union(neuByAnlage.Keys)
+    .Where(key => !string.IsNullOrWhiteSpace(key))
+    .OrderBy(key => key)
     .ToList();
 
-var dedupTable = dtChanges.Clone();
-foreach (var row in deduped) dedupTable.ImportRow(row);
-dtChanges = dedupTable;
-
-// -------- Sortieren --------
-
-if (dtChanges.Rows.Count > 0 && dtChanges.Columns.Contains(keyCol))
+foreach (var anlagenKey in allAnlagen)
 {
-    var sorted = dtChanges.AsEnumerable()
-        .OrderBy(r => (r[keyCol] ?? string.Empty).ToString())
-        .ThenBy(r => (r["Status"] ?? string.Empty).ToString())
-        .ThenBy(r => (r["Typ"] ?? string.Empty).ToString())
+    var altRows = altByAnlage.ContainsKey(anlagenKey)
+        ? altByAnlage[anlagenKey]
+        : new List<DataRow>();
+
+    var neuRows = neuByAnlage.ContainsKey(anlagenKey)
+        ? neuByAnlage[anlagenKey]
+        : new List<DataRow>();
+
+    var altByZaehlpunkt = altRows
+        .GroupBy(row => NormalizeKey(row[zaehlpunktColAlt]))
+        .ToDictionary(group => group.Key, group => group.ToList());
+
+    var neuByZaehlpunkt = neuRows
+        .GroupBy(row => NormalizeKey(row[zaehlpunktColNeu]))
+        .ToDictionary(group => group.Key, group => group.ToList());
+
+    var allZaehlpunkte = altByZaehlpunkt.Keys
+        .Union(neuByZaehlpunkt.Keys)
+        .OrderBy(key => key)
         .ToList();
 
-    var tmp = dtChanges.Clone();
-    foreach (var r in sorted) tmp.ImportRow(r);
-    dtChanges = tmp;
+    foreach (var zaehlpunktKey in allZaehlpunkte)
+    {
+        var altRowsForZp = altByZaehlpunkt.ContainsKey(zaehlpunktKey)
+            ? SortRows(altByZaehlpunkt[zaehlpunktKey], vonColAlt, bisColAlt).ToList()
+            : new List<DataRow>();
+
+        var neuRowsForZp = neuByZaehlpunkt.ContainsKey(zaehlpunktKey)
+            ? SortRows(neuByZaehlpunkt[zaehlpunktKey], vonColNeu, bisColNeu).ToList()
+            : new List<DataRow>();
+
+        int sharedCount = Math.Min(altRowsForZp.Count, neuRowsForZp.Count);
+
+        foreach (var extraAlt in altRowsForZp.Skip(sharedCount))
+        {
+            rawChanges.Rows.Add(BuildRawRow(rawChanges, extraAlt, "WEG", anlagenColAlt, zaehlpunktColAlt));
+        }
+
+        foreach (var extraNeu in neuRowsForZp.Skip(sharedCount))
+        {
+            rawChanges.Rows.Add(BuildRawRow(rawChanges, extraNeu, "NEU", anlagenColNeu, zaehlpunktColNeu));
+        }
+    }
+}
+
+var processedRaw = rawChanges.Clone();
+
+foreach (var anlagenGroup in rawChanges.AsEnumerable().GroupBy(row => AsText(row["__AnlagenKey"])))
+{
+    var groupRows = anlagenGroup.ToList();
+    var distinctZaehlpunkte = groupRows
+        .Select(row => AsText(row["__ZaehlpunktKey"]))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    if (groupRows.Count == 1)
+    {
+        processedRaw.ImportRow(groupRows[0]);
+        continue;
+    }
+
+    if (distinctZaehlpunkte.Count > 1)
+    {
+        foreach (var row in groupRows)
+        {
+            var manualRow = processedRaw.NewRow();
+            manualRow.ItemArray = row.ItemArray.Clone() as object[];
+            manualRow["ManuellePruefung"] = "JA";
+            manualRow["Hinweis"] = "Mehrere Aenderungen zur selben Anlagen-Nummer mit unterschiedlicher Zaehlpunktbezeichnung. Bitte manuell pruefen.";
+            processedRaw.Rows.Add(manualRow);
+        }
+
+        continue;
+    }
+
+    foreach (var statusGroup in groupRows.GroupBy(row => AsText(row["Status"])))
+    {
+        var sameStatusRows = statusGroup.ToList();
+
+        if (sameStatusRows.Count == 1)
+        {
+            processedRaw.ImportRow(sameStatusRows[0]);
+            continue;
+        }
+
+        var consolidatedRow = processedRaw.NewRow();
+        consolidatedRow.ItemArray = sameStatusRows[0].ItemArray.Clone() as object[];
+
+        decimal prognoseSum = sameStatusRows.Sum(row =>
+        {
+            string prognoseCol = row.Table.Columns.Contains("Prognosesmenge")
+                ? "Prognosesmenge"
+                : prognoseColNeu;
+            return ParseDecimal(row[prognoseCol]);
+        });
+
+        var fromDates = sameStatusRows
+            .Select(row => ParseDate(row["Prognoses-ab"]))
+            .Where(date => date.HasValue)
+            .Select(date => date.Value)
+            .ToList();
+
+        var toDates = sameStatusRows
+            .Select(row => ParseDate(row["Prognoses-bis"]))
+            .Where(date => date.HasValue)
+            .Select(date => date.Value)
+            .ToList();
+
+        consolidatedRow["Prognosesmenge"] = FormatDecimal(prognoseSum);
+        consolidatedRow["AnzahlKonsolidierterZeilen"] = sameStatusRows.Count.ToString();
+        consolidatedRow["Hinweis"] = "Mehrere Aenderungen mit identischer Zaehlpunktbezeichnung wurden zusammengefuehrt.";
+
+        if (fromDates.Count > 0)
+        {
+            consolidatedRow["Prognoses-ab"] = FormatDate(fromDates.Min());
+        }
+
+        if (toDates.Count > 0)
+        {
+            consolidatedRow["Prognoses-bis"] = FormatDate(toDates.Max());
+        }
+
+        processedRaw.Rows.Add(consolidatedRow);
+    }
+}
+
+dtChanges = CreateFinalTable(processedRaw);
+
+var sortedChanges = processedRaw.AsEnumerable()
+    .OrderByDescending(row => AsText(row["ManuellePruefung"]) == "JA")
+    .ThenBy(row => AsText(row["Anlagen-Nummer"]))
+    .ThenBy(row => AsText(row["Status"]))
+    .ThenBy(row => AsText(row["Zählpunktbezeichnung"]))
+    .ThenBy(row => ParseDate(row["Prognoses-ab"]) ?? DateTime.MinValue)
+    .ToList();
+
+foreach (var row in sortedChanges)
+{
+    var outputRow = dtChanges.NewRow();
+
+    foreach (DataColumn column in dtChanges.Columns)
+    {
+        outputRow[column.ColumnName] = row[column.ColumnName];
+    }
+
+    dtChanges.Rows.Add(outputRow);
 }
