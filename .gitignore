@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# .NET / C#
+bin/
+obj/
+TestResults/
+*.user
+*.rsuser
+*.suo
+*.nupkg
+*.snupkg
+
+# UiPath / Office
+.local/
+project.lock.json
+project.json
+*.tmp.xlsx
+~$*.xlsx

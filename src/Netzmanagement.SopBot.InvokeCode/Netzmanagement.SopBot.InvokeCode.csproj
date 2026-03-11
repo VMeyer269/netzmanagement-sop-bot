@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Netzmanagement.SopBot.InvokeCode</RootNamespace>
+    <AssemblyName>Netzmanagement.SopBot.InvokeCode</AssemblyName>
+  </PropertyGroup>
+</Project>

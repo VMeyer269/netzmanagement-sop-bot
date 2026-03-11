@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netzmanagement.SopBot.InvokeCode", "src\Netzmanagement.SopBot.InvokeCode\Netzmanagement.SopBot.InvokeCode.csproj", "{A4F06BD4-F89E-4A0B-B80E-3ABFB03B9775}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netzmanagement.SopBot.InvokeCode.Tests", "tests\Netzmanagement.SopBot.InvokeCode.Tests\Netzmanagement.SopBot.InvokeCode.Tests.csproj", "{03B8B0C5-2084-4EE5-8324-C36EE0852265}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A4F06BD4-F89E-4A0B-B80E-3ABFB03B9775}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4F06BD4-F89E-4A0B-B80E-3ABFB03B9775}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4F06BD4-F89E-4A0B-B80E-3ABFB03B9775}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4F06BD4-F89E-4A0B-B80E-3ABFB03B9775}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03B8B0C5-2084-4EE5-8324-C36EE0852265}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03B8B0C5-2084-4EE5-8324-C36EE0852265}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03B8B0C5-2084-4EE5-8324-C36EE0852265}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03B8B0C5-2084-4EE5-8324-C36EE0852265}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
