@@ -5,3 +5,12 @@ Argument „Condition“: CS1002: ; erwartet.
 Argument „Condition“: CS0246: Der Typ- oder Namespacename "blnAltExists" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
 Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
 Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
+
+
+Throw-Funktion
+
+Argument „Exception“: CS1002: ; erwartet.
+Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
+Argument „Exception“: CS0103: Der Name "strFileAlt" ist im aktuellen Kontext nicht vorhanden.
+Argument „Exception“: CS0103: Der Name "strFileNeu" ist im aktuellen Kontext nicht vorhanden.
+Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
