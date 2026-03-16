@@ -21,3 +21,8 @@ Throw II
 Argument „Exception“: CS1002: ; erwartet.
 Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
 Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
+
+
+Tabellenfiltereinstellung Spalte:
+
+Spaltentyp wird nicht unterstützt.
