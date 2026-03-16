@@ -1,72 +1,13 @@
-IF-Funktion 1
-
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "blnAltExists" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
-Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
-
-
-Throw-Funktion 1
-
-Argument „Exception“: CS1002: ; erwartet.
-Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
-Argument „Exception“: CS0103: Der Name "strFileAlt" ist im aktuellen Kontext nicht vorhanden.
-Argument „Exception“: CS0103: Der Name "strFileNeu" ist im aktuellen Kontext nicht vorhanden.
-Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
-
-
-Throw 2
-
-Argument „Exception“: CS1002: ; erwartet.
-Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
-Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
-
-
-Tabellenfiltereinstellung Spalte:
-
-Spaltentyp wird nicht unterstützt. (An der Stelle wollten wir ja die Spalten einfach beibehalten aber Ui-Path möchte das aus irgendeinem Grund nicht)
-
-
-IF-Funktion 2
-
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1003: Syntaxfehler. "(" erwartet.
-Argument „Condition“: CS1001: Bezeichner erwartet.
-Argument „Condition“: CS1003: Syntaxfehler. "," erwartet.
-Argument „Condition“: CS1003: Syntaxfehler. "," erwartet.
-Argument „Condition“: CS1001: Bezeichner erwartet.
-Argument „Condition“: CS1026: ) erwartet.
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "dtAlt" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "Is" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "Is" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "Rows" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0538: "dtAlt.Rows" in der expliziten Schnittstellendeklaration ist keine Schnittstelle.
-Argument „Condition“: CS0501: "Count(OrElse, Rows.Count)" ist nicht als abstrakt, extern oder partiell gekennzeichnet und muss daher einen Text deklarieren.
-Argument „Condition“: CS0102: Der Typ "Script" enthält bereits eine Definition für "Nothing".
-Argument „Condition“: CS1750: Ein Wert vom Typ "int" kann nicht als Standardparameter verwendet werden, da keine Standardkonvertierungen in den Typ "Rows.Count" vorhanden sind.
-Argument „Condition“: CS0029: Der Typ "System.Data.DataTable" kann nicht implizit in "bool" konvertiert werden.
-Argument „Condition“: CS1662: "Lambdaausdruck" kann nicht in den gewünschten Delegattyp konvertiert werden, weil einige der Rückgabetypen im Block nicht implizit in den Delegatrückgabetyp konvertiert werden können.
-
-
-
-IF-Funktion 3:
-
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1002: ; erwartet.
-Argument „Condition“: CS1003: Syntaxfehler. "(" erwartet.
-Argument „Condition“: CS1001: Bezeichner erwartet.
-Argument „Condition“: CS1026: ) erwartet.
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "dtChanges" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0246: Der Typ- oder Namespacename "Is" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
-Argument „Condition“: CS0538: "dtChanges.Rows" in der expliziten Schnittstellendeklaration ist keine Schnittstelle.
-Argument „Condition“: CS0501: "Count()" ist nicht als abstrakt, extern oder partiell gekennzeichnet und muss daher einen Text deklarieren.
-Argument „Condition“: CS0029: Der Typ "System.Data.DataTable" kann nicht implizit in "bool" konvertiert werden.
-Argument „Condition“: CS1662: "Lambdaausdruck" kann nicht in den gewünschten Delegattyp konvertiert werden, weil einige der Rückgabetypen im Block nicht implizit in den Delegatrückgabetyp konvertiert werden können.
-
-
-
-Alternative für write Range finden (Wie schon beschriebn, wegen dem Cloud Zugang)
+{
+  "message": "Fehler im SOP-Monatsvergleich: ",
+  "level": "Error",
+  "logType": "User",
+  "timeStamp": "13:19:06",
+  "fileName": "Main",
+  "jobId": "de4b475f-988d-4d2d-8547-bc32dbc3d4a7",
+  "robotName": "swhnaten@halberstadtwerke.de-attended",
+  "machineId": 44265,
+  "processVersion": "1.0.0",
+  "organizationUnitId": 72631,
+  "businessOperationId": "a11ae027289f4519bcff3aea0c420dc9-9689995974cd4346988762f62486494e"
+}
