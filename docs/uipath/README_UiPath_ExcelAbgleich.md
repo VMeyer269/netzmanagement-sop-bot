@@ -69,6 +69,7 @@ Die Ausgabe `dtChanges` enthaelt die originalen Datenspalten plus diese Zusatzsp
 - `Prognoses-bis` wird auf das spaeteste Datum gesetzt.
 - Wiederholungen mit unterschiedlicher `Zaehlpunktbezeichnung` bleiben getrennt und werden mit `ManuellePruefung = JA` markiert.
 - Die fachliche Einordnung steht zusaetzlich direkt in `ErgebnisKategorie` und kann im Workflow fuer die Ergebnisaufteilung verwendet werden.
+- Konsolidierungen werden auch dann erzeugt, wenn eine Anlage bereits im Vormonat vorhanden war, der aktuelle Monat aber mehrere Teilzeilen mit derselben `Zaehlpunktbezeichnung` enthaelt.
 
 ## Hinweis zu den Beispieldateien
 

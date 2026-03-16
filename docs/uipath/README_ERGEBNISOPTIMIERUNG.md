@@ -83,6 +83,15 @@ Praktisch erkennbar an:
 
 - `ErgebnisKategorie = ZUSAMMENGEFUEHRT`
 
+Wichtig:
+
+Diese Gruppe soll nicht nur dann entstehen, wenn eine Anlage komplett neu ins Netz kommt. Sie soll auch dann entstehen, wenn eine bereits vorhandene Anlage im aktuellen Monat mehrfach mit derselben `Zaehlpunktbezeichnung` vorkommt und deshalb fachlich zusammengefuehrt werden muss.
+
+Das betrifft also auch Faelle, bei denen:
+
+- im Vormonat bereits ein Eintrag vorhanden war
+- im aktuellen Monat aber zwei oder mehr Teilzeilen fuer dieselbe Anlage und dieselbe `Zaehlpunktbezeichnung` vorliegen
+
 ### UiPath Assign
 
 - To:

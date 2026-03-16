@@ -389,6 +389,78 @@ foreach (var anlagenGroup in rawChanges.AsEnumerable().GroupBy(row => AsText(row
     }
 }
 
+var neuKonsolidierungsGruppen = dtNeu.AsEnumerable()
+    .GroupBy(row => new
+    {
+        AnlagenKey = NormalizeKey(row[anlagenColNeu]),
+        ZaehlpunktKey = NormalizeKey(row[zaehlpunktColNeu])
+    })
+    .Where(group =>
+        !string.IsNullOrWhiteSpace(group.Key.AnlagenKey) &&
+        !string.IsNullOrWhiteSpace(group.Key.ZaehlpunktKey) &&
+        group.Count() > 1)
+    .ToList();
+
+foreach (var gruppe in neuKonsolidierungsGruppen)
+{
+    var sourceRows = SortRows(gruppe.ToList(), vonColNeu, bisColNeu).ToList();
+
+    var rowsToRemove = processedRaw.AsEnumerable()
+        .Where(row =>
+            AsText(row["__AnlagenKey"]) == gruppe.Key.AnlagenKey &&
+            AsText(row["__ZaehlpunktKey"]) == gruppe.Key.ZaehlpunktKey &&
+            AsText(row["Status"]) == "NEU")
+        .ToList();
+
+    foreach (var row in rowsToRemove)
+    {
+        processedRaw.Rows.Remove(row);
+    }
+
+    var consolidatedRow = processedRaw.NewRow();
+
+    foreach (DataColumn column in sourceRows[0].Table.Columns)
+    {
+        if (processedRaw.Columns.Contains(column.ColumnName))
+        {
+            consolidatedRow[column.ColumnName] = AsText(sourceRows[0][column.ColumnName]);
+        }
+    }
+
+    decimal prognoseSum = sourceRows.Sum(row => ParseDecimal(row[prognoseColNeu]));
+    var fromDates = sourceRows
+        .Select(row => ParseDate(row[vonColNeu]))
+        .Where(date => date.HasValue)
+        .Select(date => date.Value)
+        .ToList();
+    var toDates = sourceRows
+        .Select(row => ParseDate(row[bisColNeu]))
+        .Where(date => date.HasValue)
+        .Select(date => date.Value)
+        .ToList();
+
+    consolidatedRow["Status"] = "NEU";
+    consolidatedRow["ManuellePruefung"] = "NEIN";
+    consolidatedRow["Hinweis"] = "Mehrere Aenderungen mit identischer Zaehlpunktbezeichnung wurden zusammengefuehrt.";
+    consolidatedRow["AnzahlKonsolidierterZeilen"] = sourceRows.Count.ToString();
+    consolidatedRow["__AnlagenKey"] = gruppe.Key.AnlagenKey;
+    consolidatedRow["__ZaehlpunktKey"] = gruppe.Key.ZaehlpunktKey;
+    consolidatedRow["Prognosesmenge"] = FormatDecimal(prognoseSum);
+
+    if (fromDates.Count > 0)
+    {
+        consolidatedRow["Prognoses-ab"] = FormatDate(fromDates.Min());
+    }
+
+    if (toDates.Count > 0)
+    {
+        consolidatedRow["Prognoses-bis"] = FormatDate(toDates.Max());
+    }
+
+    SetErgebnisKategorie(consolidatedRow);
+    processedRaw.Rows.Add(consolidatedRow);
+}
+
 foreach (DataRow row in processedRaw.Rows)
 {
     if (string.IsNullOrWhiteSpace(AsText(row["ErgebnisKategorie"])))
