@@ -48,6 +48,11 @@ Die Ausgabe `dtChanges` enthaelt die originalen Datenspalten plus diese Zusatzsp
 - `Status`
   - `NEU` fuer zusaetzliche Eintraege im aktuellen Monat
   - `WEG` fuer Eintraege, die im aktuellen Monat fehlen
+- `ErgebnisKategorie`
+  - `NEUE_ANLAGE` fuer regulaere Neuzugaenge
+  - `ZUSAMMENGEFUEHRT` fuer zusammengefuehrte Dubletten
+  - `WEGFALL` fuer im aktuellen Monat fehlende Eintraege
+  - `MANUELLE_PRUEFUNG` fuer Faelle mit manueller Nachbearbeitung
 - `ManuellePruefung`
   - `JA`, wenn fuer dieselbe `Anlagen-Nummer` unterschiedliche `Zaehlpunktbezeichnungen` in der Aenderungstabelle vorkommen
   - `NEIN` in allen anderen Faellen
@@ -63,6 +68,7 @@ Die Ausgabe `dtChanges` enthaelt die originalen Datenspalten plus diese Zusatzsp
 - `Prognoses-ab` wird auf das frueheste Datum gesetzt.
 - `Prognoses-bis` wird auf das spaeteste Datum gesetzt.
 - Wiederholungen mit unterschiedlicher `Zaehlpunktbezeichnung` bleiben getrennt und werden mit `ManuellePruefung = JA` markiert.
+- Die fachliche Einordnung steht zusaetzlich direkt in `ErgebnisKategorie` und kann im Workflow fuer die Ergebnisaufteilung verwendet werden.
 
 ## Hinweis zu den Beispieldateien
 

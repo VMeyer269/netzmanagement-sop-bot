@@ -130,6 +130,7 @@ Func<DataTable> CreateRawTable = () =>
     }
 
     raw.Columns.Add("Status", typeof(string));
+    raw.Columns.Add("ErgebnisKategorie", typeof(string));
     raw.Columns.Add("ManuellePruefung", typeof(string));
     raw.Columns.Add("Hinweis", typeof(string));
     raw.Columns.Add("AnzahlKonsolidierterZeilen", typeof(string));
@@ -161,6 +162,7 @@ Func<DataTable, DataRow, string, string, string, DataRow> BuildRawRow = (targetT
     }
 
     row["Status"] = status;
+    row["ErgebnisKategorie"] = string.Empty;
     row["ManuellePruefung"] = "NEIN";
     row["Hinweis"] = string.Empty;
     row["AnzahlKonsolidierterZeilen"] = "1";
@@ -182,6 +184,44 @@ Func<IEnumerable<DataRow>, string, string, IEnumerable<DataRow>> SortRows = (row
         .ThenBy(r => ParseDate(r[dateToCol]) ?? DateTime.MinValue)
         .ThenBy(r => AsText(r["MaLo-ID"]))
         .ThenBy(r => AsText(r["Vertrags-Nummer"]));
+};
+
+Action<DataRow> SetErgebnisKategorie = row =>
+{
+    string status = AsText(row["Status"]);
+    string manuellePruefung = AsText(row["ManuellePruefung"]);
+    string hinweis = AsText(row["Hinweis"]);
+    int konsolidiert = 0;
+
+    if (row.Table.Columns.Contains("AnzahlKonsolidierterZeilen"))
+    {
+        int.TryParse(AsText(row["AnzahlKonsolidierterZeilen"]), out konsolidiert);
+    }
+
+    string kategorie;
+
+    if (manuellePruefung == "JA")
+    {
+        kategorie = "MANUELLE_PRUEFUNG";
+    }
+    else if (status == "WEG")
+    {
+        kategorie = "WEGFALL";
+    }
+    else if (status == "NEU" && (konsolidiert > 1 || !string.IsNullOrWhiteSpace(hinweis)))
+    {
+        kategorie = "ZUSAMMENGEFUEHRT";
+    }
+    else if (status == "NEU")
+    {
+        kategorie = "NEUE_ANLAGE";
+    }
+    else
+    {
+        kategorie = "SONSTIG";
+    }
+
+    row["ErgebnisKategorie"] = kategorie;
 };
 
 CleanupTable(dtAlt);
@@ -287,6 +327,7 @@ foreach (var anlagenGroup in rawChanges.AsEnumerable().GroupBy(row => AsText(row
             manualRow.ItemArray = row.ItemArray.Clone() as object[];
             manualRow["ManuellePruefung"] = "JA";
             manualRow["Hinweis"] = "Mehrere Aenderungen zur selben Anlagen-Nummer mit unterschiedlicher Zaehlpunktbezeichnung. Bitte manuell pruefen.";
+            SetErgebnisKategorie(manualRow);
             processedRaw.Rows.Add(manualRow);
         }
 
@@ -299,7 +340,10 @@ foreach (var anlagenGroup in rawChanges.AsEnumerable().GroupBy(row => AsText(row
 
         if (sameStatusRows.Count == 1)
         {
-            processedRaw.ImportRow(sameStatusRows[0]);
+            var copiedRow = processedRaw.NewRow();
+            copiedRow.ItemArray = sameStatusRows[0].ItemArray.Clone() as object[];
+            SetErgebnisKategorie(copiedRow);
+            processedRaw.Rows.Add(copiedRow);
             continue;
         }
 
@@ -340,7 +384,16 @@ foreach (var anlagenGroup in rawChanges.AsEnumerable().GroupBy(row => AsText(row
             consolidatedRow["Prognoses-bis"] = FormatDate(toDates.Max());
         }
 
+        SetErgebnisKategorie(consolidatedRow);
         processedRaw.Rows.Add(consolidatedRow);
+    }
+}
+
+foreach (DataRow row in processedRaw.Rows)
+{
+    if (string.IsNullOrWhiteSpace(AsText(row["ErgebnisKategorie"])))
+    {
+        SetErgebnisKategorie(row);
     }
 }
 
@@ -348,6 +401,7 @@ dtChanges = CreateFinalTable(processedRaw);
 
 var sortedChanges = processedRaw.AsEnumerable()
     .OrderByDescending(row => AsText(row["ManuellePruefung"]) == "JA")
+    .ThenBy(row => AsText(row["ErgebnisKategorie"]))
     .ThenBy(row => AsText(row["Anlagen-Nummer"]))
     .ThenBy(row => AsText(row["Status"]))
     .ThenBy(row => AsText(row["Zählpunktbezeichnung"]))

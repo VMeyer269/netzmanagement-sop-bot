@@ -13,6 +13,24 @@ Der Bot liefert bereits fachlich brauchbare Ergebnisse:
 
 Die aktuelle Ausgabe ist aber noch zu stark gemischt, weil alle Ergebnisse zusammen in `dtChanges` landen.
 
+Die Logik sollte deshalb direkt im `Invoke Code` eine fachliche Kategorisierung mitschreiben.
+
+## Neue Ausgabespalte aus dem Invoke Code
+
+`dtChanges` sollte eine zusaetzliche Spalte enthalten:
+
+- `ErgebnisKategorie`
+
+Empfohlene Werte:
+
+- `NEUE_ANLAGE`
+- `ZUSAMMENGEFUEHRT`
+- `WEGFALL`
+- `MANUELLE_PRUEFUNG`
+- `SONSTIG`
+
+Damit kann UiPath die Ergebnisgruppen direkt ueber eine fachliche Kategorie filtern, statt die Logik jedes Mal erneut aus `Status`, `Hinweis` und `ManuellePruefung` abzuleiten.
+
 ## Ziel der Optimierung
 
 Die Ergebnisse sollen in fachlich getrennte Gruppen aufgeteilt werden:
@@ -39,9 +57,7 @@ Zusaetzlich zu `dtChanges` sollten diese Variablen angelegt werden:
 
 Diese Gruppe soll nur die regulaeren Neuzugaenge enthalten:
 
-- `Status = NEU`
-- `ManuellePruefung = NEIN`
-- kein Hinweis auf Zusammenfuehrung
+- `ErgebnisKategorie = NEUE_ANLAGE`
 
 ### UiPath Assign
 
@@ -54,8 +70,8 @@ dtNeuRegulaer
 - Value:
 
 ```csharp
-dtChanges.Select("Status = 'NEU' AND ManuellePruefung = 'NEIN' AND (Hinweis IS NULL OR Hinweis = '')").Length > 0
-    ? dtChanges.Select("Status = 'NEU' AND ManuellePruefung = 'NEIN' AND (Hinweis IS NULL OR Hinweis = '')").CopyToDataTable()
+dtChanges.Select("ErgebnisKategorie = 'NEUE_ANLAGE'").Length > 0
+    ? dtChanges.Select("ErgebnisKategorie = 'NEUE_ANLAGE'").CopyToDataTable()
     : dtChanges.Clone()
 ```
 
@@ -65,8 +81,7 @@ Diese Gruppe soll alle Faelle enthalten, bei denen mehrere Zeilen zu einem Ergeb
 
 Praktisch erkennbar an:
 
-- `Status = NEU`
-- `Hinweis <> ''`
+- `ErgebnisKategorie = ZUSAMMENGEFUEHRT`
 
 ### UiPath Assign
 
@@ -79,12 +94,10 @@ dtKonsolidiert
 - Value:
 
 ```csharp
-dtChanges.Select("Status = 'NEU' AND Hinweis <> ''").Length > 0
-    ? dtChanges.Select("Status = 'NEU' AND Hinweis <> ''").CopyToDataTable()
+dtChanges.Select("ErgebnisKategorie = 'ZUSAMMENGEFUEHRT'").Length > 0
+    ? dtChanges.Select("ErgebnisKategorie = 'ZUSAMMENGEFUEHRT'").CopyToDataTable()
     : dtChanges.Clone()
 ```
-
-Optional robuster kann spaeter auch `AnzahlKonsolidierterZeilen > 1` als weiteres Kriterium verwendet werden.
 
 ## 3. Wegfaelle
 
@@ -92,7 +105,7 @@ Diese Gruppe soll alle Kunden oder Anlagen enthalten, die im aktuellen Monat nic
 
 Kriterium:
 
-- `Status = WEG`
+- `ErgebnisKategorie = WEGFALL`
 
 ### UiPath Assign
 
@@ -105,8 +118,8 @@ dtWegfall
 - Value:
 
 ```csharp
-dtChanges.Select("Status = 'WEG'").Length > 0
-    ? dtChanges.Select("Status = 'WEG'").CopyToDataTable()
+dtChanges.Select("ErgebnisKategorie = 'WEGFALL'").Length > 0
+    ? dtChanges.Select("ErgebnisKategorie = 'WEGFALL'").CopyToDataTable()
     : dtChanges.Clone()
 ```
 
@@ -116,7 +129,7 @@ Diese Gruppe enthaelt alle Faelle, die nicht automatisch entschieden werden soll
 
 Kriterium:
 
-- `ManuellePruefung = JA`
+- `ErgebnisKategorie = MANUELLE_PRUEFUNG`
 
 ### UiPath Assign
 
@@ -129,8 +142,8 @@ dtManual
 - Value:
 
 ```csharp
-dtChanges.Select("ManuellePruefung = 'JA'").Length > 0
-    ? dtChanges.Select("ManuellePruefung = 'JA'").CopyToDataTable()
+dtChanges.Select("ErgebnisKategorie = 'MANUELLE_PRUEFUNG'").Length > 0
+    ? dtChanges.Select("ErgebnisKategorie = 'MANUELLE_PRUEFUNG'").CopyToDataTable()
     : dtChanges.Clone()
 ```
 
@@ -209,6 +222,8 @@ Der aktuelle Bot ist fachlich bereits auf einem guten Stand, weil er:
 - Konsolidierungen erkennt
 
 Die naechste Optimierung betrifft daher vor allem nicht mehr die Kernlogik, sondern die fachliche Struktur der Ausgabe.
+
+Mit der neuen Spalte `ErgebnisKategorie` wird diese Struktur direkt aus der Logik heraus bereitgestellt.
 
 ## Empfehlung
 
