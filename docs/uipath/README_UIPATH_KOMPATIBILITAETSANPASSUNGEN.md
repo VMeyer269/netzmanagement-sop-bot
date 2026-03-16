@@ -112,6 +112,18 @@ dtChanges == null || dtChanges.Rows.Count == 0
 
 Die Activity `Filter Data Table` kann in der aktuellen Umgebung Probleme machen, insbesondere bei der Spaltenkonfiguration. Deshalb wird empfohlen, die Filterung ueber `Assign` plus `Select(...).CopyToDataTable()` umzusetzen.
 
+## Warum `Filter Data Table` hier fehlschlaegt
+
+Der Fehler mit ungueltigen Spalten tritt in diesem Workflow sehr wahrscheinlich deshalb auf, weil die Spalte `ManuellePruefung` erst im `Invoke Code` erzeugt wird. UiPath versucht die Spalten in `Filter Data Table` aber oft schon zur Designzeit zu validieren.
+
+Dadurch entstehen typische Probleme:
+
+- `dtChanges` ist zur Designzeit noch leer
+- die Zusatzspalten aus dem `Invoke Code` sind noch nicht bekannt
+- UiPath markiert die Filterspalte deshalb als ungueltig
+
+Fuer diesen Bot ist es deshalb sinnvoll, `Filter Data Table` vollstaendig zu ersetzen.
+
 ## Variablen
 
 Diese Variablen muessen vorhanden sein:
@@ -155,6 +167,50 @@ dtChanges.Select("ManuellePruefung = 'NEIN'").Length > 0
     ? dtChanges.Select("ManuellePruefung = 'NEIN'").CopyToDataTable()
     : dtChanges.Clone()
 ```
+
+## Konkrete Umsetzung in UiPath
+
+Die beiden `Filter Data Table`-Activities sollten aus dem Workflow entfernt und durch zwei `Assign`-Activities ersetzt werden.
+
+### Assign statt Filter 1
+
+- To:
+
+```csharp
+dtManual
+```
+
+- Value:
+
+```csharp
+dtChanges.Select("ManuellePruefung = 'JA'").Length > 0
+    ? dtChanges.Select("ManuellePruefung = 'JA'").CopyToDataTable()
+    : dtChanges.Clone()
+```
+
+### Assign statt Filter 2
+
+- To:
+
+```csharp
+dtAuto
+```
+
+- Value:
+
+```csharp
+dtChanges.Select("ManuellePruefung = 'NEIN'").Length > 0
+    ? dtChanges.Select("ManuellePruefung = 'NEIN'").CopyToDataTable()
+    : dtChanges.Clone()
+```
+
+## Vorteil dieser Loesung
+
+Diese Variante ist fuer euren Workflow robuster als `Filter Data Table`, weil:
+
+- keine Designzeit-Validierung auf unbekannte Spalten erfolgt
+- die Filterung direkt auf der bereits erzeugten `dtChanges`-Tabelle arbeitet
+- manuelle und automatische Faelle ohne zusaetzliche Activity-Probleme getrennt werden
 
 ## Zaehlerwerte setzen
 
