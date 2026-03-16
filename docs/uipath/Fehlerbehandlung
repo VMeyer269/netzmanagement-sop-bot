@@ -14,3 +14,10 @@ Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleExcep
 Argument „Exception“: CS0103: Der Name "strFileAlt" ist im aktuellen Kontext nicht vorhanden.
 Argument „Exception“: CS0103: Der Name "strFileNeu" ist im aktuellen Kontext nicht vorhanden.
 Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
+
+
+Throw II
+
+Argument „Exception“: CS1002: ; erwartet.
+Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
+Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
