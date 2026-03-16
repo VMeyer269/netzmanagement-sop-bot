@@ -1,269 +1,534 @@
-# Umsetzungsanleitung: UiPath-Anbindung fuer den SOP-Monatsvergleich
+# Umsetzungsanleitung: Konkreter UiPath-Workflow fuer den SOP-Monatsvergleich
 
-Diese Anleitung beschreibt, wie der C#-`Invoke Code`-Block aus [InvokeCode_ExcelAbgleich.cs](/Users/personliches/Documents/process-automation-engine/docs/uipath/InvokeCode_ExcelAbgleich.cs) in einen arbeitsfaehigen UiPath-Workflow eingebunden wird.
+Diese Anleitung ersetzt die allgemeine Beschreibung durch einen konkreten Bauplan fuer den UiPath-Workflow. Ziel ist ein lauffaehiger Bot, der:
 
-## Zielbild
+1. die Datei des Vormonats einliest
+2. die Datei des aktuellen Monats einliest
+3. den `Invoke Code`-Block ausfuehrt
+4. das Ergebnis in automatische und manuelle Faelle trennt
+5. die Ausgabedateien schreibt
 
-Der Workflow soll:
+Referenz fuer den Code-Block:
+- [InvokeCode_ExcelAbgleich.cs](/Users/personliches/Documents/process-automation-engine/docs/uipath/InvokeCode_ExcelAbgleich.cs)
 
-1. die CSV- oder Excel-Datei des Vormonats einlesen
-2. die CSV- oder Excel-Datei des aktuellen Monats einlesen
-3. beide Tabellen an den `Invoke Code`-Block uebergeben
-4. die Ergebnistabelle `dtChanges` zur Weiterverarbeitung bereitstellen
-5. manuell zu pruefende Faelle gesondert markieren oder exportieren
+## Zielstruktur im Designer
 
-## Empfohlener Workflow-Aufbau
+Der empfohlene Aufbau in UiPath ist:
 
-Empfohlene Reihenfolge in einer `Sequence`:
-
-1. `Assign` fuer Pfadvariablen
-2. `Path Exists` oder `File Exists` fuer beide Quelldateien
-3. `If` fuer Dateipruefung mit sauberer Fehlermeldung
-4. `Read CSV` oder `Use Excel File` plus `Read Range` fuer Vormonat
-5. `Read CSV` oder `Use Excel File` plus `Read Range` fuer aktuellen Monat
-6. `Invoke Code` fuer den Vergleich
-7. `Filter Data Table` oder `For Each Row in Data Table` fuer Nachbearbeitung
-8. `Write Range Workbook` oder `Write CSV` fuer Ergebnisexport
-9. optional `Log Message` und `Send Mail` fuer Reporting
+1. `Sequence` mit Name `SOP Monatsvergleich`
+2. darin ein `Try Catch`
+3. im `Try`:
+   - mehrere `Assign`
+   - `Path Exists` fuer beide Quelldateien
+   - `If` zur Dateipruefung
+   - `Use Excel File` fuer Vormonat
+   - `Read Range` nach `dtAlt`
+   - `Use Excel File` fuer aktuellen Monat
+   - `Read Range` nach `dtNeu`
+   - `Invoke Code`
+   - `If` fuer Ergebnispruefung
+   - `Filter Data Table` nach `dtManual`
+   - `Filter Data Table` nach `dtAuto`
+   - `Use Excel File` fuer Ergebnisdatei
+   - mehrere `Write Range`
+   - mehrere `Log Message`
+4. im `Catch`:
+   - `Log Message`
+   - optional `Throw`
 
 ## Variablen
 
-Diese Variablen solltest du mindestens auf Workflow-Ebene definieren:
+Lege diese Variablen auf Workflow-Ebene an:
 
-- `strFileAlt` (`String`)
-  - Vollstaendiger Dateipfad zum Vormonat
-- `strFileNeu` (`String`)
-  - Vollstaendiger Dateipfad zum aktuellen Monat
-- `strOutputPath` (`String`)
-  - Zielpfad fuer die Ausgabe
-- `dtAlt` (`System.Data.DataTable`)
-  - eingelesene Tabelle des Vormonats
-- `dtNeu` (`System.Data.DataTable`)
-  - eingelesene Tabelle des aktuellen Monats
-- `dtChanges` (`System.Data.DataTable`)
-  - Ergebnis des Invoke-Code-Blocks
-- `dtManual` (`System.Data.DataTable`)
-  - optional gefilterte Tabelle nur mit `ManuellePruefung = "JA"`
-- `dtAuto` (`System.Data.DataTable`)
-  - optional gefilterte Tabelle nur mit `ManuellePruefung = "NEIN"`
-- `blnAltExists` (`Boolean`)
-  - Kennzeichen, ob die Vormonatsdatei vorhanden ist
-- `blnNeuExists` (`Boolean`)
-  - Kennzeichen, ob die aktuelle Datei vorhanden ist
-- `strLogMessage` (`String`)
-  - fuer Status- und Fehlerausgaben
+- `strFileAlt` vom Typ `String`
+- `strFileNeu` vom Typ `String`
+- `strOutputFile` vom Typ `String`
+- `blnAltExists` vom Typ `Boolean`
+- `blnNeuExists` vom Typ `Boolean`
+- `dtAlt` vom Typ `System.Data.DataTable`
+- `dtNeu` vom Typ `System.Data.DataTable`
+- `dtChanges` vom Typ `System.Data.DataTable`
+- `dtManual` vom Typ `System.Data.DataTable`
+- `dtAuto` vom Typ `System.Data.DataTable`
+- `intChangesCount` vom Typ `Int32`
+- `intManualCount` vom Typ `Int32`
+- `intAutoCount` vom Typ `Int32`
+- `strErrorMessage` vom Typ `String`
 
-## Argumente fuer den Invoke-Code-Block
+## Schritt 1: Startwerte setzen
 
-Im `Invoke Code`-Block:
+Füge am Anfang der `Try`-Sektion drei `Assign`-Activities ein.
 
-Language:
-- `CSharp`
+### Assign 1
 
-Namespaces:
+- Name: `Setze Pfad Vormonat`
+- To: `strFileAlt`
+- Value:
+
+```vb
+"C:\Users\swhrpant\Desktop\BKS_SOP_01_2026.xlsx"
+```
+
+Wenn du weiter mit CSV arbeitest:
+
+```vb
+"C:\Users\swhrpant\Desktop\BKS_SOP_01_2026.csv"
+```
+
+### Assign 2
+
+- Name: `Setze Pfad aktueller Monat`
+- To: `strFileNeu`
+- Value:
+
+```vb
+"C:\Users\swhrpant\Desktop\BK_SOP_02_2026.xlsx"
+```
+
+oder bei CSV:
+
+```vb
+"C:\Users\swhrpant\Desktop\BK_SOP_02_2026.csv"
+```
+
+### Assign 3
+
+- Name: `Setze Ausgabedatei`
+- To: `strOutputFile`
+- Value:
+
+```vb
+"C:\Users\swhrpant\Desktop\SOP_Changes_2026_02.xlsx"
+```
+
+## Schritt 2: Quelldateien pruefen
+
+Füge zwei `Path Exists`-Activities ein.
+
+### Path Exists 1
+
+- Input Path: `strFileAlt`
+- Exists: `blnAltExists`
+
+### Path Exists 2
+
+- Input Path: `strFileNeu`
+- Exists: `blnNeuExists`
+
+Danach ein `If`.
+
+### If: Dateien vorhanden
+
+- Condition:
+
+```vb
+Not blnAltExists OrElse Not blnNeuExists
+```
+
+### Then
+
+Füge eine `Throw`-Activity ein.
+
+- Exception:
+
+```vb
+New BusinessRuleException("Mindestens eine Eingabedatei wurde nicht gefunden. Vormonat: " + strFileAlt + " | Aktueller Monat: " + strFileNeu)
+```
+
+### Else
+
+- leer lassen
+
+## Schritt 3: Vormonat einlesen
+
+Füge eine `Use Excel File`-Activity ein.
+
+### Use Excel File: Vormonat
+
+- Excel-Datei: `strFileAlt`
+- Referenzieren als: `ExcelAlt`
+- `Aenderungen speichern`: deaktiviert
+- `Erstellen, falls nicht vorhanden`: deaktiviert
+
+Innerhalb davon eine `Read Range`-Activity.
+
+### Read Range: Vormonat
+
+- Bereich:
+
+```vb
+ExcelAlt.Sheet("Sheet1").UsedRange
+```
+
+Wenn das Blatt anders heißt, dort den echten Blattnamen eintragen.
+
+- Hat Header: aktiviert
+- Nur sichtbare Zeilen: deaktiviert
+- Speichern unter: `dtAlt`
+
+## Schritt 4: Aktuellen Monat einlesen
+
+Füge direkt darunter eine zweite `Use Excel File`-Activity ein.
+
+### Use Excel File: aktueller Monat
+
+- Excel-Datei: `strFileNeu`
+- Referenzieren als: `ExcelNeu`
+- `Aenderungen speichern`: deaktiviert
+- `Erstellen, falls nicht vorhanden`: deaktiviert
+
+Innerhalb davon wieder eine `Read Range`-Activity.
+
+### Read Range: aktueller Monat
+
+- Bereich:
+
+```vb
+ExcelNeu.Sheet("Sheet1").UsedRange
+```
+
+- Hat Header: aktiviert
+- Nur sichtbare Zeilen: deaktiviert
+- Speichern unter: `dtNeu`
+
+## Schritt 5: Eingelesene Daten pruefen
+
+Füge ein `If` direkt unter die beiden Einlesebloecke.
+
+### If: Tabellen vorhanden
+
+- Condition:
+
+```vb
+dtAlt Is Nothing OrElse dtNeu Is Nothing OrElse dtAlt.Rows.Count = 0 OrElse dtNeu.Rows.Count = 0
+```
+
+### Then
+
+Füge eine `Throw`-Activity ein.
+
+- Exception:
+
+```vb
+New BusinessRuleException("Eine oder beide Eingabetabellen sind leer.")
+```
+
+### Else
+
+- leer lassen
+
+## Schritt 6: Invoke Code einhaengen
+
+Füge jetzt den `Invoke Code`-Block direkt unter die Validierung.
+
+### Invoke Code
+
+- Language: `CSharp`
+
+### Namespaces
+
+Trage diese Namespaces ein:
+
 - `System`
 - `System.Data`
 - `System.Linq`
 - `System.Collections.Generic`
 - `System.Globalization`
 
-Arguments:
-- `dtAlt` (`In`, `System.Data.DataTable`)
-- `dtNeu` (`In`, `System.Data.DataTable`)
-- `dtChanges` (`Out`, `System.Data.DataTable`)
+### Arguments
 
-Wichtig:
-- `dtChanges` muss als `Out` gesetzt sein.
-- `dtAlt` und `dtNeu` muessen vor dem Aufruf bereits befuellt sein.
-- Der Inhalt aus [InvokeCode_ExcelAbgleich.cs](/Users/personliches/Documents/process-automation-engine/docs/uipath/InvokeCode_ExcelAbgleich.cs) wird 1:1 in die Aktivitaet eingefuegt.
+Lege diese Argumente an:
 
-## Dateieinlesung
+- `dtAlt`
+  - Direction: `In`
+  - Type: `System.Data.DataTable`
+  - Value: `dtAlt`
+- `dtNeu`
+  - Direction: `In`
+  - Type: `System.Data.DataTable`
+  - Value: `dtNeu`
+- `dtChanges`
+  - Direction: `Out`
+  - Type: `System.Data.DataTable`
+  - Value: `dtChanges`
 
-## Variante A: CSV-Dateien
+### Code
 
-Fuer deine aktuellen Beispieldateien ist `Read CSV` der direkte Weg.
+Den Inhalt aus dieser Datei komplett einfuegen:
 
-Empfohlene Aktivitaeten:
+- [InvokeCode_ExcelAbgleich.cs](/Users/personliches/Documents/process-automation-engine/docs/uipath/InvokeCode_ExcelAbgleich.cs)
 
-1. `Assign`
-   - `strFileAlt = "C:\\...\\BKS_SOP_01_2026.csv"`
-   - `strFileNeu = "C:\\...\\BK_SOP_02_2026.csv"`
-2. `Path Exists`
-   - prueft `strFileAlt`
-   - Ausgabe nach `blnAltExists`
-3. `Path Exists`
-   - prueft `strFileNeu`
-   - Ausgabe nach `blnNeuExists`
-4. `If Not blnAltExists OrElse Not blnNeuExists`
-   - dann `Throw` oder `Log Message`
-5. `Read CSV` fuer `strFileAlt`
-   - Output: `dtAlt`
-   - Delimiter: `;`
-   - Encoding: moeglichst `Windows-1252` oder `System.Text.Encoding.Default`, falls Sonderzeichen sonst falsch gelesen werden
-   - AddHeaders: `True`
-6. `Read CSV` fuer `strFileNeu`
-   - Output: `dtNeu`
-   - gleiche Einstellungen wie oben
+## Schritt 7: Ergebnis pruefen
 
-## Variante B: Excel-Dateien
+Füge direkt unter dem `Invoke Code` ein `If` ein.
 
-Wenn die Dateien spaeter als `.xlsx` kommen:
+### If: Aenderungen vorhanden
 
-1. `Use Excel File`
-2. darin `Read Range`
-3. Option `AddHeaders` aktivieren
-4. jeweils in `dtAlt` und `dtNeu` einlesen
+- Condition:
 
-Wichtig bei Excel:
-- Nur das relevante Tabellenblatt lesen
-- Keine Leerzeilen oberhalb der Header zulassen
-- Sicherstellen, dass die Spaltennamen exakt den erwarteten Bezeichnungen entsprechen
+```vb
+dtChanges Is Nothing OrElse dtChanges.Rows.Count = 0
+```
 
-## Erwartete Pflichtspalten
+### Then
 
-Der `Invoke Code` erwartet mindestens diese Spalten:
+Füge eine `Log Message`-Activity ein.
 
-- `Anlagen-Nummer`
-- `Zählpunktbezeichnung`
-- `Prognosesmenge`
-- `Prognoses-ab`
-- `Prognoses-bis`
+- Level: `Info`
+- Message:
 
-Weitere Spalten werden uebernommen, sind aber fuer die Kernlogik optional.
+```vb
+"Keine Aenderungen zwischen Vormonat und aktuellem Monat gefunden."
+```
 
-## Invoke-Code einbinden
+Danach kannst du den Workflow an dieser Stelle beenden.
 
-In UiPath:
+### Else
 
-1. `Invoke Code` einfuegen
-2. Language auf `CSharp` setzen
-3. die genannten Namespaces eintragen
-4. die Argumente `dtAlt`, `dtNeu`, `dtChanges` anlegen
-5. den Code aus [InvokeCode_ExcelAbgleich.cs](/Users/personliches/Documents/process-automation-engine/docs/uipath/InvokeCode_ExcelAbgleich.cs) einfuegen
+Hier geht die Nachverarbeitung weiter.
 
-Nach dem Lauf enthaelt `dtChanges`:
+## Schritt 8: Zaehler setzen
 
-- Originalspalten aus den Quelldateien
-- `Status`
-- `ManuellePruefung`
-- `Hinweis`
-- `AnzahlKonsolidierterZeilen`
+Innerhalb des `Else` nach Schritt 7 drei `Assign`-Activities einfuegen.
 
-## Empfohlene Nachbearbeitung in UiPath
+### Assign
 
-### 1. Manuelle Faelle abtrennen
+- To: `intChangesCount`
+- Value:
 
-Mit `Filter Data Table`:
+```vb
+dtChanges.Rows.Count
+```
 
-- Bedingung `ManuellePruefung = "JA"`
-- Ergebnis nach `dtManual`
+### Log Message
 
-Danach ein zweiter Filter:
+- Level: `Info`
+- Message:
 
-- Bedingung `ManuellePruefung = "NEIN"`
-- Ergebnis nach `dtAuto`
+```vb
+"Anzahl Aenderungen gesamt: " + intChangesCount.ToString
+```
 
-So kannst du automatische und manuelle Faelle getrennt weiterverarbeiten.
+## Schritt 9: Manuelle Faelle filtern
 
-### 2. Ergebnisse exportieren
+Füge eine `Filter Data Table`-Activity ein.
 
-Empfohlene Ausgabe:
+### Filter Data Table: manuelle Faelle
 
-- `dtChanges` als Gesamtergebnis
-- `dtManual` als Datei fuer manuelle Bearbeitung
-- `dtAuto` als Datei fuer automatische Folgeprozesse
+- Input: `dtChanges`
+- Output: `dtManual`
 
-Sinnvolle Aktivitaeten:
+Filterbedingung:
 
-- `Write Range Workbook`
-- `Write CSV`
-- optional `Create Folder`, falls Zielverzeichnis dynamisch angelegt werden soll
+- Spalte: `ManuellePruefung`
+- Operator: `=`
+- Wert: `JA`
 
-## Empfohlene Zusatzvariablen fuer sauberen Betrieb
+Spalten:
 
-Wenn du den Bot robuster machen willst, sind diese Variablen sinnvoll:
+- alle Spalten beibehalten
 
-- `intChangeCount` (`Int32`)
-  - `dtChanges.Rows.Count`
-- `intManualCount` (`Int32`)
-  - `dtManual.Rows.Count`
-- `intAutoCount` (`Int32`)
-  - `dtAuto.Rows.Count`
-- `strRunMonth` (`String`)
-  - z. B. `"2026-02"`
-- `strPreviousMonth` (`String`)
-  - z. B. `"2026-01"`
+Danach:
 
-Diese Werte kannst du fuer Logs, Dateinamen und E-Mail-Betreffs verwenden.
+### Assign
 
-## Empfohlene Logs
+- To: `intManualCount`
+- Value:
 
-Mindestens diese `Log Message`-Punkte sind sinnvoll:
+```vb
+If(dtManual Is Nothing, 0, dtManual.Rows.Count)
+```
 
-- Start des Workflows
-- verwendeter Dateipfad fuer Vormonat
-- verwendeter Dateipfad fuer aktuellen Monat
-- Anzahl eingelesener Zeilen in `dtAlt`
-- Anzahl eingelesener Zeilen in `dtNeu`
-- Anzahl Zeilen in `dtChanges`
-- Anzahl manueller Faelle
-- Anzahl automatischer Faelle
-- Export erfolgreich abgeschlossen
+### Log Message
 
-## Typische Fehlerquellen
+- Level: `Info`
+- Message:
 
-### 1. Falscher CSV-Delimiter
+```vb
+"Anzahl manueller Faelle: " + intManualCount.ToString
+```
 
-Deine Beispieldateien sind mit `;` getrennt. Wenn UiPath mit `,` liest, verschiebt sich die komplette Tabelle in eine einzige Spalte.
+## Schritt 10: Automatische Faelle filtern
 
-### 2. Falsche Zeichenkodierung
+Füge direkt darunter eine zweite `Filter Data Table`-Activity ein.
 
-Wenn `Zählpunktbezeichnung` oder andere Umlaute kaputt aussehen, stimmt meistens die CSV-Encoding-Einstellung nicht.
+### Filter Data Table: automatische Faelle
 
-### 3. Header stimmen nicht exakt
+- Input: `dtChanges`
+- Output: `dtAuto`
 
-Schon kleine Abweichungen bei den Pflichtspalten fuehren im `Invoke Code` zu einem Fehler.
+Filterbedingung:
 
-### 4. `dtChanges` nicht als Out-Argument gesetzt
+- Spalte: `ManuellePruefung`
+- Operator: `=`
+- Wert: `NEIN`
 
-Dann liefert der Block zwar intern ein Ergebnis, aber nichts kommt im Workflow an.
+Spalten:
 
-### 5. Leere oder unvollstaendige Eingabedateien
+- alle Spalten beibehalten
 
-Vor dem `Invoke Code` immer Dateiexistenz und nach dem Einlesen die Zeilenanzahl pruefen.
+Danach:
 
-## Empfohlene Schutzmechanismen
+### Assign
 
-Fuer einen reibungslosen Ablauf solltest du diese Punkte einbauen:
+- To: `intAutoCount`
+- Value:
 
-1. `Try Catch` um den kompletten Import- und Vergleichsblock
-2. `If dtAlt Is Nothing OrElse dtAlt.Rows.Count = 0`
-3. `If dtNeu Is Nothing OrElse dtNeu.Rows.Count = 0`
-4. klare Fehlermeldung bei fehlenden Pflichtspalten
-5. Export der manuellen Faelle in eine eigene Datei
-6. nachvollziehbare Dateinamen mit Monat und Laufdatum
+```vb
+If(dtAuto Is Nothing, 0, dtAuto.Rows.Count)
+```
 
-## Beispiel fuer sinnvolle Ausgabedateien
+### Log Message
 
-- `SOP_Changes_2026_02.xlsx`
-- `SOP_ManualReview_2026_02.xlsx`
-- `SOP_AutoProcessing_2026_02.xlsx`
+- Level: `Info`
+- Message:
 
-## Minimaler produktiver Ablauf
+```vb
+"Anzahl automatischer Faelle: " + intAutoCount.ToString
+```
 
-Wenn du zuerst nur eine lauffaehige Basis willst, reicht dieser Flow:
+## Schritt 11: Ergebnisdatei schreiben
 
-1. `Assign` der beiden Dateipfade
-2. `Read CSV` fuer Vormonat nach `dtAlt`
-3. `Read CSV` fuer aktuellen Monat nach `dtNeu`
-4. `Invoke Code` mit `dtAlt`, `dtNeu`, `dtChanges`
-5. `Write Range Workbook` fuer `dtChanges`
+Füge unterhalb der beiden Filter eine `Use Excel File`-Activity ein.
 
-## Empfehlung fuer den naechsten Ausbauschritt
+### Use Excel File: Ausgabe
 
-Nach der ersten lauffaehigen Version solltest du als Naechstes:
+- Excel-Datei: `strOutputFile`
+- Referenzieren als: `ExcelOut`
+- `Aenderungen speichern`: aktiviert
+- `Erstellen, falls nicht vorhanden`: aktiviert
 
-1. `dtManual` separat exportieren
-2. Fehlerbehandlung mit `Try Catch` einbauen
-3. Dateinamen dynamisch aus Monat und Jahr ableiten
-4. Logging fuer Zeilenanzahlen und Sonderfaelle ergaenzen
+Innerhalb dieser Activity drei `Write Range`-Activities einfuegen.
+
+### Write Range 1: Gesamtergebnis
+
+- Bereich:
+
+```vb
+ExcelOut.Sheet("Changes").Range("A1")
+```
+
+- Daten: `dtChanges`
+- Kopfzeilen einbeziehen: aktiviert
+
+### Write Range 2: manuelle Faelle
+
+- Bereich:
+
+```vb
+ExcelOut.Sheet("ManualReview").Range("A1")
+```
+
+- Daten: `dtManual`
+- Kopfzeilen einbeziehen: aktiviert
+
+### Write Range 3: automatische Faelle
+
+- Bereich:
+
+```vb
+ExcelOut.Sheet("AutoProcessing").Range("A1")
+```
+
+- Daten: `dtAuto`
+- Kopfzeilen einbeziehen: aktiviert
+
+Wenn `Write Range` Probleme macht, weil das Blatt noch nicht existiert, setze vorher jeweils `Write Range Workbook` ein oder lege die Sheets vorab an.
+
+## Schritt 12: Abschluss-Logging
+
+Unter dem Ausgabeblock eine `Log Message`.
+
+- Level: `Info`
+- Message:
+
+```vb
+"SOP-Monatsvergleich abgeschlossen. Ergebnisdatei: " + strOutputFile
+```
+
+## Schritt 13: Catch-Block
+
+Im `Catch` des `Try Catch`:
+
+### Assign
+
+- To: `strErrorMessage`
+- Value:
+
+```vb
+exception.Message
+```
+
+### Log Message
+
+- Level: `Error`
+- Message:
+
+```vb
+"Fehler im SOP-Monatsvergleich: " + strErrorMessage
+```
+
+Optional danach:
+
+### Rethrow
+
+Wenn der Prozess zentral behandelt werden soll, fuege `Rethrow` hinzu.
+
+## Kompakte Reihenfolge der Activities
+
+Die genaue Reihenfolge im Workflow sollte so aussehen:
+
+1. `Try Catch`
+2. `Assign` `strFileAlt`
+3. `Assign` `strFileNeu`
+4. `Assign` `strOutputFile`
+5. `Path Exists` fuer `strFileAlt`
+6. `Path Exists` fuer `strFileNeu`
+7. `If` auf Dateiexistenz
+8. `Use Excel File` Vormonat
+9. `Read Range` nach `dtAlt`
+10. `Use Excel File` aktueller Monat
+11. `Read Range` nach `dtNeu`
+12. `If` auf leere Tabellen
+13. `Invoke Code`
+14. `If` auf leeres `dtChanges`
+15. `Assign` `intChangesCount`
+16. `Log Message`
+17. `Filter Data Table` nach `dtManual`
+18. `Assign` `intManualCount`
+19. `Log Message`
+20. `Filter Data Table` nach `dtAuto`
+21. `Assign` `intAutoCount`
+22. `Log Message`
+23. `Use Excel File` Ausgabe
+24. `Write Range` `dtChanges`
+25. `Write Range` `dtManual`
+26. `Write Range` `dtAuto`
+27. `Log Message` Abschluss
+28. `Catch`
+29. `Log Message` Fehler
+30. optional `Rethrow`
+
+## Wichtige Einstellungen, damit es stabil laeuft
+
+- In `Read Range` immer `Hat Header` aktivieren
+- bei Excel moeglichst `UsedRange` lesen statt nur `A1`
+- `dtChanges` im `Invoke Code` unbedingt als `Out` setzen
+- Spaltennamen in den Quelldateien muessen exakt stimmen:
+  - `Anlagen-Nummer`
+  - `Zählpunktbezeichnung`
+  - `Prognosesmenge`
+  - `Prognoses-ab`
+  - `Prognoses-bis`
+- falls Sonderzeichen in CSV-Dateien kaputt aussehen, nicht `Use Excel File`, sondern `Read CSV` mit passender Codierung verwenden
+
+## Empfehlung fuer deinen aktuellen Stand
+
+Da du `dtAlt` und `dtNeu` schon eingelesen hast und der `Invoke Code` bereits darunter sitzt, solltest du als Naechstes genau diese Bloecke ergaenzen:
+
+1. `If` auf `dtChanges`
+2. `Filter Data Table` fuer `dtManual`
+3. `Filter Data Table` fuer `dtAuto`
+4. `Use Excel File` fuer die Ergebnisdatei
+5. drei `Write Range`-Activities
+6. `Try Catch` und `Log Message`, falls noch nicht vorhanden
