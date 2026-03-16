@@ -12,16 +12,16 @@
 // System.Collections.Generic
 // System.Globalization
 
-var deCulture = new CultureInfo("de-DE");
+var deCulture = new System.Globalization.CultureInfo("de-DE");
 
 Func<object, string> AsText = value =>
 {
     return (value ?? string.Empty).ToString().Trim();
 };
 
-Func<string, string> NormalizeKey = value =>
+Func<object, string> NormalizeKey = value =>
 {
-    return (value ?? string.Empty).Trim().ToUpperInvariant();
+    return AsText(value).ToUpperInvariant();
 };
 
 Func<DataTable, string, string> GetColumnName = (table, expectedName) =>
@@ -80,9 +80,9 @@ Func<object, decimal> ParseDecimal = value =>
     if (string.IsNullOrWhiteSpace(text)) return 0m;
 
     decimal parsed;
-    if (decimal.TryParse(text, NumberStyles.Any, deCulture, out parsed)) return parsed;
-    if (decimal.TryParse(text.Replace(".", string.Empty).Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out parsed)) return parsed;
-    if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out parsed)) return parsed;
+    if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, deCulture, out parsed)) return parsed;
+    if (decimal.TryParse(text.Replace(".", string.Empty).Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed)) return parsed;
+    if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed)) return parsed;
 
     return 0m;
 };
@@ -98,8 +98,8 @@ Func<object, DateTime?> ParseDate = value =>
     if (string.IsNullOrWhiteSpace(text)) return null;
 
     DateTime parsed;
-    if (DateTime.TryParse(text, deCulture, DateTimeStyles.None, out parsed)) return parsed;
-    if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) return parsed;
+    if (DateTime.TryParse(text, deCulture, System.Globalization.DateTimeStyles.None, out parsed)) return parsed;
+    if (DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out parsed)) return parsed;
 
     return null;
 };
@@ -247,7 +247,9 @@ foreach (var anlagenKey in allAnlagen)
             ? SortRows(neuByZaehlpunkt[zaehlpunktKey], vonColNeu, bisColNeu).ToList()
             : new List<DataRow>();
 
-        int sharedCount = Math.Min(altRowsForZp.Count, neuRowsForZp.Count);
+        int altCount = altRowsForZp.Count;
+        int neuCount = neuRowsForZp.Count;
+        int sharedCount = System.Math.Min(altCount, neuCount);
 
         foreach (var extraAlt in altRowsForZp.Skip(sharedCount))
         {
