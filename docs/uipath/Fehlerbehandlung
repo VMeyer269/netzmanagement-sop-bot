@@ -1,16 +1,7 @@
-Kein kompilierter Code zum Ausführen
-Fehler CS0246: Der Typ- oder Namespacename "CultureInfo" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis). Bei Zeile 14
-Fehler CS0103: Der Name "NumberStyles" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 82
-Fehler CS0103: Der Name "NumberStyles" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 83
-Fehler CS0103: Der Name "CultureInfo" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 83
-Fehler CS0103: Der Name "NumberStyles" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 84
-Fehler CS0103: Der Name "CultureInfo" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 84
-Fehler CS0103: Der Name "DateTimeStyles" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 100
-Fehler CS0103: Der Name "CultureInfo" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 101
-Fehler CS0103: Der Name "DateTimeStyles" ist im aktuellen Kontext nicht vorhanden. Bei Zeile 101
-Fehler CS1503: Argument "1": Konvertierung von "object" in "string" nicht möglich. Bei Zeile 166
-Fehler CS1503: Argument "1": Konvertierung von "object" in "string" nicht möglich. Bei Zeile 167
-Fehler CS1503: Argument "1": Konvertierung von "object" in "string" nicht möglich. Bei Zeile 203
-Fehler CS1503: Argument "1": Konvertierung von "object" in "string" nicht möglich. Bei Zeile 207
-Fehler CS1503: Argument "1": Konvertierung von "Methodengruppe" in "byte" nicht möglich. Bei Zeile 249
-Fehler CS1503: Argument "2": Konvertierung von "Methodengruppe" in "byte" nicht möglich. Bei Zeile 249
+IF-Funktion
+
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "blnAltExists" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
+Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
