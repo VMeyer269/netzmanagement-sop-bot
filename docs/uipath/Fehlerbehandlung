@@ -1,4 +1,4 @@
-IF-Funktion
+IF-Funktion 1
 
 Argument „Condition“: CS1002: ; erwartet.
 Argument „Condition“: CS1002: ; erwartet.
@@ -7,7 +7,7 @@ Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>
 Argument „Condition“: CS0305: Die Verwendung von Typ "Not<TOperand, TResult>" (generisch) erfordert 2-Typargumente.
 
 
-Throw-Funktion
+Throw-Funktion 1
 
 Argument „Exception“: CS1002: ; erwartet.
 Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
@@ -16,7 +16,7 @@ Argument „Exception“: CS0103: Der Name "strFileNeu" ist im aktuellen Kontext
 Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generisch) erfordert 1-Typargumente.
 
 
-Throw II
+Throw 2
 
 Argument „Exception“: CS1002: ; erwartet.
 Argument „Exception“: CS1955: Der nicht aufrufbare Member "BusinessRuleException" kann nicht wie eine Methode verwendet werden.
@@ -25,10 +25,10 @@ Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generis
 
 Tabellenfiltereinstellung Spalte:
 
-Spaltentyp wird nicht unterstützt.
+Spaltentyp wird nicht unterstützt. (An der Stelle wollten wir ja die Spalten einfach beibehalten aber Ui-Path möchte das aus irgendeinem Grund nicht)
 
 
-IF-Funktion II:
+IF-Funktion 2
 
 Argument „Condition“: CS1002: ; erwartet.
 Argument „Condition“: CS1002: ; erwartet.
@@ -53,7 +53,7 @@ Argument „Condition“: CS1662: "Lambdaausdruck" kann nicht in den gewünschte
 
 
 
-IF-Funktion III:
+IF-Funktion 3:
 
 Argument „Condition“: CS1002: ; erwartet.
 Argument „Condition“: CS1002: ; erwartet.
@@ -69,4 +69,4 @@ Argument „Condition“: CS1662: "Lambdaausdruck" kann nicht in den gewünschte
 
 
 
-Alternative für write Range finden
+Alternative für write Range finden (Wie schon beschriebn, wegen dem Cloud Zugang)
