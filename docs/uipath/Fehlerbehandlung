@@ -26,3 +26,47 @@ Argument „Exception“: CS0305: Die Verwendung von Typ "New<TResult>" (generis
 Tabellenfiltereinstellung Spalte:
 
 Spaltentyp wird nicht unterstützt.
+
+
+IF-Funktion II:
+
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1003: Syntaxfehler. "(" erwartet.
+Argument „Condition“: CS1001: Bezeichner erwartet.
+Argument „Condition“: CS1003: Syntaxfehler. "," erwartet.
+Argument „Condition“: CS1003: Syntaxfehler. "," erwartet.
+Argument „Condition“: CS1001: Bezeichner erwartet.
+Argument „Condition“: CS1026: ) erwartet.
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "dtAlt" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "Is" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "Is" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "Rows" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0538: "dtAlt.Rows" in der expliziten Schnittstellendeklaration ist keine Schnittstelle.
+Argument „Condition“: CS0501: "Count(OrElse, Rows.Count)" ist nicht als abstrakt, extern oder partiell gekennzeichnet und muss daher einen Text deklarieren.
+Argument „Condition“: CS0102: Der Typ "Script" enthält bereits eine Definition für "Nothing".
+Argument „Condition“: CS1750: Ein Wert vom Typ "int" kann nicht als Standardparameter verwendet werden, da keine Standardkonvertierungen in den Typ "Rows.Count" vorhanden sind.
+Argument „Condition“: CS0029: Der Typ "System.Data.DataTable" kann nicht implizit in "bool" konvertiert werden.
+Argument „Condition“: CS1662: "Lambdaausdruck" kann nicht in den gewünschten Delegattyp konvertiert werden, weil einige der Rückgabetypen im Block nicht implizit in den Delegatrückgabetyp konvertiert werden können.
+
+
+
+IF-Funktion III:
+
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1002: ; erwartet.
+Argument „Condition“: CS1003: Syntaxfehler. "(" erwartet.
+Argument „Condition“: CS1001: Bezeichner erwartet.
+Argument „Condition“: CS1026: ) erwartet.
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "dtChanges" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0246: Der Typ- oder Namespacename "Is" wurde nicht gefunden (möglicherweise fehlt eine using-Direktive oder ein Assemblyverweis).
+Argument „Condition“: CS0538: "dtChanges.Rows" in der expliziten Schnittstellendeklaration ist keine Schnittstelle.
+Argument „Condition“: CS0501: "Count()" ist nicht als abstrakt, extern oder partiell gekennzeichnet und muss daher einen Text deklarieren.
+Argument „Condition“: CS0029: Der Typ "System.Data.DataTable" kann nicht implizit in "bool" konvertiert werden.
+Argument „Condition“: CS1662: "Lambdaausdruck" kann nicht in den gewünschten Delegattyp konvertiert werden, weil einige der Rückgabetypen im Block nicht implizit in den Delegatrückgabetyp konvertiert werden können.
+
+
+
+Alternative für write Range finden
