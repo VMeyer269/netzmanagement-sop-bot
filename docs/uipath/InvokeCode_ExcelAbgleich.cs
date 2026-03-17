@@ -76,13 +76,42 @@ Action<DataTable> CleanupTable = table =>
 
 Func<object, decimal> ParseDecimal = value =>
 {
+    if (value == null || value == DBNull.Value) return 0m;
+
+    if (value is decimal) return (decimal)value;
+    if (value is double) return Convert.ToDecimal((double)value);
+    if (value is float) return Convert.ToDecimal((float)value);
+    if (value is int) return Convert.ToDecimal((int)value);
+    if (value is long) return Convert.ToDecimal((long)value);
+
     var text = AsText(value);
     if (string.IsNullOrWhiteSpace(text)) return 0m;
 
     decimal parsed;
-    if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, deCulture, out parsed)) return parsed;
-    if (decimal.TryParse(text.Replace(".", string.Empty).Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed)) return parsed;
+    bool hasComma = text.Contains(",");
+    bool hasDot = text.Contains(".");
+
+    if (hasComma && !hasDot)
+    {
+        if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, deCulture, out parsed)) return parsed;
+    }
+
+    if (hasDot && !hasComma)
+    {
+        if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed)) return parsed;
+    }
+
+    if (hasComma && hasDot)
+    {
+        var normalizedGerman = text.Replace(".", string.Empty);
+        if (decimal.TryParse(normalizedGerman, System.Globalization.NumberStyles.Any, deCulture, out parsed)) return parsed;
+
+        var normalizedInvariant = text.Replace(",", string.Empty);
+        if (decimal.TryParse(normalizedInvariant, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed)) return parsed;
+    }
+
     if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed)) return parsed;
+    if (decimal.TryParse(text, System.Globalization.NumberStyles.Any, deCulture, out parsed)) return parsed;
 
     return 0m;
 };
