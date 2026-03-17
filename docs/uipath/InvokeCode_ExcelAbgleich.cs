@@ -461,6 +461,30 @@ foreach (var gruppe in neuKonsolidierungsGruppen)
     processedRaw.Rows.Add(consolidatedRow);
 }
 
+var neuManuelleGruppen = dtNeu.AsEnumerable()
+    .GroupBy(row => NormalizeKey(row[anlagenColNeu]))
+    .Where(group =>
+        !string.IsNullOrWhiteSpace(group.Key) &&
+        group.Select(row => NormalizeKey(row[zaehlpunktColNeu]))
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count() > 1)
+    .ToList();
+
+foreach (var gruppe in neuManuelleGruppen)
+{
+    var matchingRows = processedRaw.AsEnumerable()
+        .Where(row => AsText(row["__AnlagenKey"]) == gruppe.Key)
+        .ToList();
+
+    foreach (var row in matchingRows)
+    {
+        row["ManuellePruefung"] = "JA";
+        row["Hinweis"] = "Zur selben Anlagen-Nummer liegen unterschiedliche Zaehlpunktbezeichnungen vor. Bitte manuell pruefen.";
+        SetErgebnisKategorie(row);
+    }
+}
+
 foreach (DataRow row in processedRaw.Rows)
 {
     if (string.IsNullOrWhiteSpace(AsText(row["ErgebnisKategorie"])))

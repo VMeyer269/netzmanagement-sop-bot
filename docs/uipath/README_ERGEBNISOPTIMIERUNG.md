@@ -140,6 +140,13 @@ Kriterium:
 
 - `ErgebnisKategorie = MANUELLE_PRUEFUNG`
 
+Fachregel:
+
+- gleiche `Anlagen-Nummer` und unterschiedliche `Zaehlpunktbezeichnungen` => manueller Fall
+- gleiche `Anlagen-Nummer` und gleiche `Zaehlpunktbezeichnung` => Konsolidierung
+
+Die manuelle Pruefung hat dabei Vorrang vor der Konsolidierung.
+
 ### UiPath Assign
 
 - To:

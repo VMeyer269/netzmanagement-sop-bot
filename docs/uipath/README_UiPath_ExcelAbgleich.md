@@ -70,6 +70,7 @@ Die Ausgabe `dtChanges` enthaelt die originalen Datenspalten plus diese Zusatzsp
 - Wiederholungen mit unterschiedlicher `Zaehlpunktbezeichnung` bleiben getrennt und werden mit `ManuellePruefung = JA` markiert.
 - Die fachliche Einordnung steht zusaetzlich direkt in `ErgebnisKategorie` und kann im Workflow fuer die Ergebnisaufteilung verwendet werden.
 - Konsolidierungen werden auch dann erzeugt, wenn eine Anlage bereits im Vormonat vorhanden war, der aktuelle Monat aber mehrere Teilzeilen mit derselben `Zaehlpunktbezeichnung` enthaelt.
+- Fuer die Prioritaet gilt: gleiche `Anlagen-Nummer` plus gleiche `Zaehlpunktbezeichnung` fuehrt zur Konsolidierung; gleiche `Anlagen-Nummer` plus unterschiedliche `Zaehlpunktbezeichnungen` fuehrt zur manuellen Pruefung.
 
 ## Hinweis zu den Beispieldateien
 
